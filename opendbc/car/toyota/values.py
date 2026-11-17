@@ -63,6 +63,8 @@ class ToyotaFlags(IntFlag):
   HYBRID = 1
   HAS_BSM = 2  # blind spot monitoring
   DISABLE_RADAR = 4
+  # DSU ACC messages (e.g. 0x343) are rerouted to the camera bus by a DSU bypass harness
+  DSU_BYPASS = 8192
 
   # Static flags
   TSS2 = 8

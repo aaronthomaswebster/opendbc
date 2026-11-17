@@ -29,6 +29,27 @@ class TestToyotaInterfaces(unittest.TestCase):
     # At this time, only RAV4 2023 is expected to use LTA/angle control
     assert cars_with(ToyotaFlags.ANGLE_CONTROL) == {CAR.TOYOTA_RAV4_TSS2_2023}
 
+  def test_dsu_bypass_enables_longitudinal(self):
+    from opendbc.car.toyota.interface import CarInterface
+    from opendbc.car.toyota.values import ToyotaSafetyFlags
+
+    for camera_message in (0x343, 0x4CB):
+      fingerprint = {bus: {} for bus in range(4)}
+      fingerprint[2][camera_message] = 8
+      CP = CarInterface.get_params(CAR.TOYOTA_COROLLA, fingerprint, [], alpha_long=False, is_release=False, docs=False)
+      assert CP.flags & ToyotaFlags.DSU_BYPASS.value
+      assert CP.openpilotLongitudinalControl
+      assert not CP.safetyConfigs[0].safetyParam & ToyotaSafetyFlags.STOCK_LONGITUDINAL.value
+
+  def test_prius_always_enables_dsu_bypass(self):
+    from opendbc.car.toyota.interface import CarInterface
+
+    CP = CarInterface.get_params(CAR.TOYOTA_PRIUS, {bus: {} for bus in range(4)}, [],
+                                 alpha_long=False, is_release=False, docs=False)
+    assert CP.flags & ToyotaFlags.DSU_BYPASS.value
+    assert CP.openpilotLongitudinalControl
+    assert CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT.value
+
   def test_tss2_dbc(self):
     # We make some assumptions about TSS2 platforms,
     # like looking up certain signals only in this DBC

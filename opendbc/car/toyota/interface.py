@@ -88,6 +88,20 @@ class CarInterface(CarInterfaceBase):
     if 0x3F6 in fingerprint[0] and ret.flags & ToyotaFlags.TSS2:
       ret.flags |= ToyotaFlags.HAS_BSM.value
 
+    # A DSU bypass/reroute harness moves stock DSU ACC messages (0x343 ACC_CONTROL,
+    # 0x4CB PCS_HUD) onto the camera bus so panda can safely send longitudinal commands.
+    # These messages are normally absent on bus 2 for pre-TSS2 platforms.
+    # See https://github.com/cydia2020/toyota-dsu-reroute-harness
+    camera_fingerprint = fingerprint.get(2, {})
+    if not (ret.flags & ToyotaFlags.TSS2) and (0x343 in camera_fingerprint or 0x4CB in camera_fingerprint):
+      ret.flags |= ToyotaFlags.DSU_BYPASS.value
+
+    # Permanent enable for Prius with DSU reroute harness installed. Auto-detect above can
+    # miss the harness during fingerprint when bus 0/2 look parallel; this is a personal-fork
+    # assumption for a car that always has the bypass wired.
+    if candidate == CAR.TOYOTA_PRIUS:
+      ret.flags |= ToyotaFlags.DSU_BYPASS.value
+
     ret.radarUnavailable = Bus.radar not in DBC[candidate]
 
     # since we don't yet parse radar on TSS2 radar-based ACC cars, gate longitudinal behind alpha toggle
@@ -99,11 +113,13 @@ class CarInterface(CarInterfaceBase):
 
     # openpilot longitudinal enabled by default:
     #  - TSS2 cars with camera sending ACC_CONTROL where we can block it
+    #  - TSS-P cars with a DSU bypass/reroute harness
     # openpilot longitudinal behind alpha long toggle:
     #  - TSS2 radar ACC cars (disables radar)
 
     ret.openpilotLongitudinalControl = ((bool(ret.flags & ToyotaFlags.TSS2) and not (ret.flags & ToyotaFlags.RADAR_ACC)) or
-                                        bool(ret.flags & ToyotaFlags.DISABLE_RADAR.value))
+                                        bool(ret.flags & ToyotaFlags.DISABLE_RADAR.value) or
+                                        bool(ret.flags & ToyotaFlags.DSU_BYPASS.value))
 
     ret.autoResumeSng = ret.openpilotLongitudinalControl
 
@@ -114,7 +130,7 @@ class CarInterface(CarInterfaceBase):
     # to a negative value, so it won't matter.
     ret.minEnableSpeed = -1. if stop_and_go else MIN_ACC_SPEED
 
-    if ret.flags & ToyotaFlags.TSS2:
+    if ret.flags & (ToyotaFlags.TSS2 | ToyotaFlags.DSU_BYPASS):
       ret.flags |= ToyotaFlags.RAISED_ACCEL_LIMIT.value
 
       # Hybrids have much quicker longitudinal actuator response
