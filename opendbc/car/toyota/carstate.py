@@ -165,7 +165,13 @@ class CarState(CarStateBase):
         ret.accFaulted = ret.accFaulted or cp.vl["PCM_CRUISE_2"]["LOW_SPEED_LOCKOUT"] == 2
 
     pcm_acc_status = cp.vl["PCM_CRUISE"]["CRUISE_STATE"]
-    ret.cruiseState.standstill = pcm_acc_status == 7
+    # Prius / DSU-bypass hybrids can leave a stop with only an accel request. Reporting
+    # PCM standstill forces longcontrol to stay in "stopping" and requires a manual RES
+    # press (and can hit the stock stop-timer cancel after a few seconds).
+    if self.CP.openpilotLongitudinalControl and (dsu_bypass or self.CP.flags & ToyotaFlags.HYBRID.value):
+      ret.cruiseState.standstill = False
+    else:
+      ret.cruiseState.standstill = pcm_acc_status == 7
     ret.cruiseState.enabled = bool(cp.vl["PCM_CRUISE"]["CRUISE_ACTIVE"])
     ret.cruiseState.nonAdaptive = pcm_acc_status in (1, 2, 3, 4, 5, 6)
 

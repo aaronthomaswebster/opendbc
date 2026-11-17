@@ -59,6 +59,8 @@ class CarInterface(CarInterfaceBase):
 
     if candidate == CAR.TOYOTA_PRIUS:
       stop_and_go = True
+      # Always hybrid; needed so carcontroller never latches PCM standstill hold
+      ret.flags |= ToyotaFlags.HYBRID.value
       # Only give steer angle deadzone to for bad angle sensor prius
       for fw in car_fw:
         if fw.ecu == "eps" and not fw.fwVersion == b'8965B47060\x00\x00\x00\x00\x00\x00':

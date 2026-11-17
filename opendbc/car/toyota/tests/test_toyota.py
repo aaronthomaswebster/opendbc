@@ -49,6 +49,8 @@ class TestToyotaInterfaces(unittest.TestCase):
     assert CP.flags & ToyotaFlags.DSU_BYPASS.value
     assert CP.openpilotLongitudinalControl
     assert CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT.value
+    assert CP.flags & ToyotaFlags.HYBRID.value
+    assert CP.autoResumeSng
 
   def test_tss2_dbc(self):
     # We make some assumptions about TSS2 platforms,
