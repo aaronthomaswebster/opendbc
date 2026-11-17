@@ -199,12 +199,13 @@ class CarState(CarStateBase):
         buttonEvents.extend(create_button_events(1, 0, {1: ButtonType.lkas}) +
                             create_button_events(0, 1, {1: ButtonType.lkas}))
 
-      if not (self.CP.flags & (ToyotaFlags.RADAR_ACC | ToyotaFlags.SECOC)):
-        # distance button is wired to the ACC module (camera or radar)
-        prev_distance_button = self.distance_button
-        self.distance_button = cp_acc.vl["ACC_CONTROL"]["DISTANCE"]
-
-        buttonEvents += create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
+    # Distance button is on ACC_CONTROL from the camera ACC module (TSS2) or the
+    # rerouted DSU (DSU bypass). Presses cycle openpilot follow distance/personality.
+    if (dsu_bypass or (self.CP.flags & ToyotaFlags.TSS2 and
+                       not (self.CP.flags & (ToyotaFlags.RADAR_ACC | ToyotaFlags.SECOC)))):
+      prev_distance_button = self.distance_button
+      self.distance_button = cp_acc.vl["ACC_CONTROL"]["DISTANCE"]
+      buttonEvents += create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
 
     ret.buttonEvents = buttonEvents
     return ret
